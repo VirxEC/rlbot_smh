@@ -1,0 +1,23 @@
+[project]
+name = "rlbot_smh"
+version = "0.0.1"
+authors = [
+  { name="VirxEC", email="virx@virxcase.dev" },
+]
+description = "Start match helpers for RLBot"
+readme = "README.md"
+license = { file="LICENSE.md" }
+requires-python = ">=3.6"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/VirxEC/rlbot_smh"
+"Bug Tracker" = "https://github.com/VirxEC/rlbot_smh/issues"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
