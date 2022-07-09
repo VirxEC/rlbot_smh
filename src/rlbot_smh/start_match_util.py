@@ -7,9 +7,8 @@ from rlbot.parsing.incrementing_integer import IncrementingInteger
 from rlbot.setup_manager import RocketLeagueLauncherPreference, SetupManager
 from rlbot.utils import logging_utils
 
-from custom_map_util import identify_map_directory, prepare_custom_map
+from .custom_map_util import identify_map_directory, prepare_custom_map
 
-sm: SetupManager = None
 logger = logging_utils.get_logger("match_handler")
 
 
@@ -28,17 +27,6 @@ def create_player_config(bot: dict, human_index_tracker: IncrementingInteger):
 
 def create_script_config(script):
     return ScriptConfig(script['path'])
-
-
-def get_fresh_setup_manager():
-    global sm
-    if sm is not None:
-        try:
-            sm.shut_down()
-        except Exception as e:
-            print(e)
-    sm = SetupManager()
-    return sm
 
 
 def setup_match(
@@ -78,7 +66,7 @@ def setup_match(
     else:
         do_setup()
 
-def start_match_helper(bot_list: List[dict], match_settings: dict, launcher_prefs: RocketLeagueLauncherPreference):
+def start_match_helper(sm: SetupManager, bot_list: List[dict], match_settings: dict, launcher_prefs: RocketLeagueLauncherPreference):
     print(f"Bot list: {bot_list}")
     print(f"Match settings: {match_settings}")
     print(f"Launcher preferences: {launcher_prefs}")
@@ -120,7 +108,6 @@ def start_match_helper(bot_list: List[dict], match_settings: dict, launcher_pref
     # these fancy prints to stderr will not get printed to the console
     # the Rust port of the RLBotGUI will capture it and fire a tauri event
 
-    sm = get_fresh_setup_manager()
     try:
         setup_match(sm, match_config, launcher_prefs)
         print("-|-*|MATCH STARTED|*-|-", flush=True)

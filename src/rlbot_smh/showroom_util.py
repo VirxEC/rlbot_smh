@@ -42,10 +42,8 @@ def _physics_to_dict(physics: PhysicsGTP):
     }
 
 
-def fetch_game_tick_packet() -> GameTickPacket:
-    global sm
-    if sm is None:
-        sm = SetupManager()
+def fetch_game_tick_packet(sm: SetupManager) -> GameTickPacket:
+    if not sm.has_started:
         sm.connect_to_game()
     game_tick_packet = GameTickPacket()
     sm.game_interface.update_live_data_packet(game_tick_packet)
@@ -128,10 +126,8 @@ def dict_to_rot(r):
     return rot
 
 
-def set_game_state(state):
-    global sm
-    if sm is None:
-        sm = SetupManager()
+def set_game_state(sm: SetupManager, state):
+    if not sm.has_started:
         sm.connect_to_game()
     game_state = dict_to_game_state(state)
     sm.game_interface.set_game_state(game_state)
@@ -154,7 +150,7 @@ def convert_to_looks_config(looks: dict):
     return looks_config
 
 
-def spawn_car_in_showroom(loadout_config: LoadoutConfig, team: int, showcase_type: str, map_name: str,
+def spawn_car_in_showroom(sm: SetupManager, loadout_config: LoadoutConfig, team: int, showcase_type: str, map_name: str,
                           launcher_prefs: RocketLeagueLauncherPreference):
     match_config = MatchConfig()
     match_config.game_mode = 'Soccer'
@@ -177,13 +173,10 @@ def spawn_car_in_showroom(loadout_config: LoadoutConfig, team: int, showcase_typ
     match_config.mutators.boost_amount = 'Unlimited'
     match_config.mutators.match_length = 'Unlimited'
 
-    global sm
-    if sm is None:
-        sm = SetupManager()
-    sm.connect_to_game(launcher_preference=launcher_prefs)
+    if not sm.has_started:
+        sm.connect_to_game(launcher_preference=launcher_prefs)
     sm.load_match_config(match_config)
     sm.start_match()
-
 
     game_state = GameState(
         cars={0: CarState(physics=Physics(
@@ -228,7 +221,8 @@ def spawn_car_in_showroom(loadout_config: LoadoutConfig, team: int, showcase_typ
     sm.game_interface.update_player_input(player_input, 0)
     sm.game_interface.set_game_state(game_state)
 
-def spawn_car_for_viewing(looks: dict, team: int, showcase_type: str, map_name: str, launcher_prefs: RocketLeagueLauncherPreference):
+def spawn_car_for_viewing(sm: SetupManager, looks: dict, team: int, showcase_type: str, map_name: str, launcher_prefs: RocketLeagueLauncherPreference):
     looks_config = convert_to_looks_config(looks)
     loadout_config = load_bot_appearance(looks_config, team)
-    spawn_car_in_showroom(loadout_config, team, showcase_type, map_name, launcher_prefs)
+    spawn_car_in_showroom(sm, loadout_config, team, showcase_type, map_name, launcher_prefs)
+    print("Opened showroom!", flush=True)

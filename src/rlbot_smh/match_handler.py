@@ -4,19 +4,23 @@ import sys
 from pathlib import Path
 from traceback import print_exc
 
-from rlbot.setup_manager import RocketLeagueLauncherPreference
+from rlbot.setup_manager import RocketLeagueLauncherPreference, SetupManager
 
-from showroom_util import (fetch_game_tick_packet, set_game_state,
+from .showroom_util import (fetch_game_tick_packet, set_game_state,
                             spawn_car_for_viewing)
-from start_match_util import start_match_helper
+from .start_match_util import start_match_helper
 
-if __name__ == "__main__":
+
+def listen():
     mp.set_start_method("spawn")
+
+    sm = SetupManager()
     
     try:
         online = True
         while online:
             command = sys.stdin.readline()
+            print(command)
             params = command.split(" | ")
 
             if params[0] == "start_match":
@@ -30,16 +34,12 @@ if __name__ == "__main__":
                 else:
                     rocket_league_exe_path = None
 
-                start_match_helper(bot_list, match_settings, RocketLeagueLauncherPreference(preferred_launcher, use_login_tricks, rocket_league_exe_path))
+                start_match_helper(sm, bot_list, match_settings, RocketLeagueLauncherPreference(preferred_launcher, use_login_tricks, rocket_league_exe_path))
             elif params[0] == "shut_down":
-                if sm is not None:
-                    sm.shut_down(time_limit=5, kill_all_pids=True)
-                    sm = None
-                else:
-                    print("There gotta be some setup manager already")
+                sm.shut_down(time_limit=5, kill_all_pids=True)
                 online = False
             elif params[0] == "fetch-gtp":
-                print(f"-|-*|GTP {json.dumps(fetch_game_tick_packet())}|*-|-", flush=True)
+                print(f"-|-*|GTP {json.dumps(fetch_game_tick_packet(sm))}|*-|-", flush=True)
             elif params[0] == "set_state":
                 state = json.loads(params[1])
                 set_game_state(state)
@@ -56,13 +56,11 @@ if __name__ == "__main__":
                 else:
                     rocket_league_exe_path = None
 
-                spawn_car_for_viewing(config, team, showcase_type, map_name, RocketLeagueLauncherPreference(preferred_launcher, use_login_tricks, rocket_league_exe_path))
+                spawn_car_for_viewing(sm, config, team, showcase_type, map_name, RocketLeagueLauncherPreference(preferred_launcher, use_login_tricks, rocket_league_exe_path))
     except Exception:
         print_exc()
 
-    if sm is not None:
-        sm.shut_down(time_limit=5, kill_all_pids=True)
-        sm = None
+    sm.shut_down(time_limit=5, kill_all_pids=True)
 
     print("Closing...", flush=True)
     exit()
