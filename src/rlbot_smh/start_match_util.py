@@ -1,6 +1,8 @@
+import platform
 from traceback import print_exc
 from typing import List
 
+from rlbot import version
 from rlbot.matchconfig.match_config import (MatchConfig, MutatorConfig,
                                             PlayerConfig, ScriptConfig)
 from rlbot.parsing.incrementing_integer import IncrementingInteger
@@ -36,7 +38,11 @@ def setup_match(
 
     def do_setup():
         setup_manager.early_start_seconds = 5
-        setup_manager.connect_to_game(launcher_preference=launcher_pref)
+        if platform.system() != "Windows" and setup_manager.has_started:
+            version.print_current_release_notes()
+            setup_manager.ensure_rlbot_gateway_started()
+        else:
+            setup_manager.connect_to_game(launcher_preference=launcher_pref)
 
         # Loading the setup manager's game interface just as a quick fix because story mode uses it. Ideally story mode
         # should now make its own game interface to use.
@@ -66,10 +72,10 @@ def setup_match(
     else:
         do_setup()
 
-def start_match_helper(sm: SetupManager, bot_list: List[dict], match_settings: dict, launcher_prefs: RocketLeagueLauncherPreference):
+
+def create_match_config(bot_list: List[dict], match_settings: dict) -> MatchConfig:
     print(f"Bot list: {bot_list}")
     print(f"Match settings: {match_settings}")
-    print(f"Launcher preferences: {launcher_prefs}")
 
     match_config = MatchConfig()
     match_config.game_mode = match_settings['game_mode']
@@ -105,7 +111,13 @@ def start_match_helper(sm: SetupManager, bot_list: List[dict], match_settings: d
     match_config.player_configs = [create_player_config(bot, human_index_tracker) for bot in bot_list]
     match_config.script_configs = [create_script_config(script) for script in match_settings['scripts']]
 
-    # these fancy prints to stderr will not get printed to the console
+    return match_config
+
+
+def start_match_wrapper(sm: SetupManager, match_config: MatchConfig, launcher_prefs: RocketLeagueLauncherPreference):
+    print(f"Launcher preferences: {launcher_prefs}")
+
+    # these fancy prints will not get printed to the console
     # the Rust port of the RLBotGUI will capture it and fire a tauri event
 
     try:
@@ -114,3 +126,7 @@ def start_match_helper(sm: SetupManager, bot_list: List[dict], match_settings: d
     except Exception:
         print_exc()
         print("-|-*|MATCH START FAILED|*-|-", flush=True)
+
+
+def start_match_helper(sm: SetupManager, bot_list: List[dict], match_settings: dict, launcher_prefs: RocketLeagueLauncherPreference):
+    start_match_wrapper(sm, create_match_config(bot_list, match_settings), launcher_prefs)
