@@ -5,6 +5,9 @@ from typing import List
 from rlbot import version
 from rlbot.matchconfig.match_config import (MatchConfig, MutatorConfig,
                                             PlayerConfig, ScriptConfig)
+from rlbot.matchconfig.psyonix_config import set_random_psyonix_bot_preset
+from rlbot.parsing.agent_config_parser import load_bot_appearance
+from rlbot.parsing.bot_config_bundle import get_bot_config_bundle
 from rlbot.parsing.incrementing_integer import IncrementingInteger
 from rlbot.setup_manager import RocketLeagueLauncherPreference, SetupManager
 from rlbot.utils import logging_utils
@@ -22,8 +25,16 @@ def create_player_config(bot: dict, human_index_tracker: IncrementingInteger):
     player_config.human_index = 0 if player_config.bot else human_index_tracker.increment()
     player_config.name = bot['name']
     player_config.team = int(bot['team'])
+
     if 'path' in bot and bot['path']:
-        player_config.config_path = bot['path']
+        bot_path = bot['path']
+        player_config.config_path = bot_path
+        config = get_bot_config_bundle(bot_path)
+        loadout = load_bot_appearance(config.get_looks_config(), player_config.team)
+        player_config.loadout_config = loadout
+    elif player_config.bot and not player_config.rlbot_controlled:
+        set_random_psyonix_bot_preset(player_config)
+    
     return player_config
 
 

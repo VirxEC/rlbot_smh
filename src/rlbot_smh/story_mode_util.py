@@ -192,9 +192,9 @@ class ManualStatsTracker:
             if self._in_demo_state[i]:  # we will toggle this if we have respawned
                 self._in_demo_state[i] = cur_player.is_demolished
             elif cur_player.is_demolished:
-                print("SOMEONE GOT DEMO'd")
+                print("SOMEONE GOT DEMO'd", flush=True)
                 self._in_demo_state[i] = True
-                if i == self._human_player_index:
+                if not gamePacket.game_cars[i].is_bot:
                     self.stats["recievedDemos"] += 1
                 elif i >= self._challenge["humanTeamSize"]:
                     # its an opponent bot
