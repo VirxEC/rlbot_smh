@@ -43,7 +43,7 @@ def listen():
                 print(f"-|-*|GTP {json.dumps(fetch_game_tick_packet(sm))}|*-|-", flush=True)
             elif params[0] == "set_state":
                 state = json.loads(params[1])
-                set_game_state(state)
+                set_game_state(sm, state)
             elif params[0] == "spawn_car_for_viewing":
                 config = json.loads(params[1])
                 team = int(params[2])
@@ -90,8 +90,6 @@ def listen():
                 save_state = add_match_result(save_state, challenge_id, completed, results)
 
                 print(f"-|-*|STORY_RESULT {json.dumps(save_state)}|*-|-", flush=True)
-
-                online = False
     except Exception:
         print_exc()
 
