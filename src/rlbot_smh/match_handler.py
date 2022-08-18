@@ -14,7 +14,10 @@ from .story_mode_util import run_challenge, add_match_result
 
 
 def listen():
-    mp.set_start_method("spawn")
+    try:
+        mp.set_start_method("spawn")
+    except RuntimeError:
+        pass
 
     sm = SetupManager()
     online = True
@@ -94,7 +97,7 @@ def listen():
         print_exc()
 
     if sm.has_started:
-        sm.shut_down()
+        sm.shut_down(kill_all_pids=True)
 
     print("Closing...", flush=True)
     exit()
