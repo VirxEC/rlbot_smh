@@ -1,8 +1,7 @@
-import platform
+from time import sleep
 from traceback import print_exc
 from typing import List
 
-from rlbot import version
 from rlbot.matchconfig.match_config import (MatchConfig, MutatorConfig,
                                             PlayerConfig, ScriptConfig)
 from rlbot.matchconfig.psyonix_config import set_random_psyonix_bot_preset
@@ -49,11 +48,7 @@ def setup_match(
 
     def do_setup():
         setup_manager.early_start_seconds = 5
-        if platform.system() != "Windows" and setup_manager.has_started:
-            version.print_current_release_notes()
-            setup_manager.ensure_rlbot_gateway_started()
-        else:
-            setup_manager.connect_to_game(launcher_preference=launcher_pref)
+        setup_manager.connect_to_game(launcher_preference=launcher_pref)
 
         # Loading the setup manager's game interface just as a quick fix because story mode uses it. Ideally story mode
         # should now make its own game interface to use.
@@ -62,8 +57,23 @@ def setup_match(
         setup_manager.launch_early_start_bot_processes()
         setup_manager.start_match()
         setup_manager.launch_bot_processes()
-        while not setup_manager.has_received_metadata_from_all_bots():
+
+        logger.info("Waiting to recieve metadata from all bots...")
+
+        times_waited = 0
+        # wait for all metadata, or for 10 seconds
+        while not setup_manager.has_received_metadata_from_all_bots() and times_waited < 40:
+            if times_waited != 0:
+                expected_metadata = sum(1 for player in setup_manager.match_config.player_configs if player.rlbot_controlled)
+                needed_metadata = expected_metadata - setup_manager.num_metadata_received
+                logger.info(f"Waiting for metadata from {needed_metadata} bot{'s' if needed_metadata > 1 else ''}...")
+                sleep(0.25)
+            times_waited += 1
             setup_manager.try_recieve_agent_metadata()
+
+        if not setup_manager.has_received_metadata_from_all_bots():
+            expected_metadata = sum(1 for player in setup_manager.match_config.player_configs if player.rlbot_controlled)
+            logger.warning(f"Did not receive metadata from all bots. Expected {expected_metadata} but only got {setup_manager.num_metadata_received}")
 
     map_file = match_config.game_map
     if map_file.endswith('.upk') or map_file.endswith('.udk'):
@@ -78,16 +88,13 @@ def setup_match(
                 config_path = metadata["config_path"]
                 match_config.script_configs.append(
                     create_script_config({'path': config_path}))
-                print(f"Will load custom script for map {config_path}")
+                logger.info(f"Will load custom script for map {config_path}")
             do_setup()
     else:
         do_setup()
 
 
 def create_match_config(bot_list: List[dict], match_settings: dict) -> MatchConfig:
-    print(f"Bot list: {bot_list}")
-    print(f"Match settings: {match_settings}")
-
     match_config = MatchConfig()
     match_config.game_mode = match_settings['game_mode']
     match_config.game_map = match_settings['map']
@@ -126,7 +133,7 @@ def create_match_config(bot_list: List[dict], match_settings: dict) -> MatchConf
 
 
 def start_match_wrapper(sm: SetupManager, match_config: MatchConfig, launcher_prefs: RocketLeagueLauncherPreference):
-    print(f"Launcher preferences: {launcher_prefs}")
+    logger.info(f"Launcher preferences: {launcher_prefs}")
 
     # these fancy prints will not get printed to the console
     # the Rust port of the RLBotGUI will capture it and fire a tauri event
