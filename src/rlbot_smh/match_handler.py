@@ -14,11 +14,6 @@ from .story_mode_util import run_challenge, add_match_result
 
 
 def listen():
-    try:
-        mp.set_start_method("spawn")
-    except RuntimeError:
-        pass
-
     sm = SetupManager()
     online = True
 
