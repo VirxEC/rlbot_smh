@@ -1,5 +1,4 @@
 import json
-import multiprocessing as mp
 import sys
 from pathlib import Path
 from traceback import print_exc
@@ -20,7 +19,6 @@ def listen():
     try:
         while online:
             command = sys.stdin.readline()
-            print(command)
             params = command.split(" | ")
 
             if params[0] == "start_match":
@@ -36,6 +34,7 @@ def listen():
 
                 start_match_helper(sm, bot_list, match_settings, RocketLeagueLauncherPreference(preferred_launcher, use_login_tricks, rocket_league_exe_path))
             elif params[0] == "shut_down":
+                print("Got shut down signal", flush=True)
                 online = False
             elif params[0] == "fetch-gtp":
                 print(f"-|-*|GTP {json.dumps(fetch_game_tick_packet(sm))}|*-|-", flush=True)
