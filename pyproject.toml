@@ -1,12 +1,11 @@
 [project]
 name = "rlbot_smh"
-version = "1.0.6"
+version = "1.0.7"
 authors = [
   { name="VirxEC", email="virx@virxcase.dev" },
 ]
 description = "Start match helpers for RLBot"
 readme = "README.md"
-license = { file="LICENSE.md" }
 requires-python = ">=3.6"
 classifiers = [
     "Programming Language :: Python :: 3",
