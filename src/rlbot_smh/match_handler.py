@@ -1,7 +1,11 @@
 import json
+import multiprocessing as mp
+import platform
 import sys
 from pathlib import Path
+from queue import Empty
 from threading import Thread
+from time import sleep
 from traceback import print_exc
 from typing import List
 
@@ -92,25 +96,24 @@ def launch_challenge(params: List[str], sm: SetupManager):
     print(f"-|-*|STORY_RESULT {json.dumps(save_state)}|*-|-", flush=True)
 
 
-def listen():
+def match_handler(q: mp.Queue):
     sm = SetupManager()
     online = True
 
     while online:
-        try:
-            command = sys.stdin.readline()
-        except Exception:
-            online = False
-            continue
+        command = q.get()
+        print(f"Received command: {command}")
         params = command.split(" | ")
+        if len(params) == 0:
+            continue
 
         try:
             if params[0] == "start_match":
-                Thread(target=start_match, args=(params, sm)).start()
+                start_match(params, sm)
             elif params[0] == "kill_bots":
                 Thread(target=stop_match, args=(sm,)).start()
             elif params[0] == "shut_down":
-                print("Got shut down signal", flush=True)
+                print("Got shut down signal")
                 online = False
             elif params[0] == "fetch_gtp":
                 Thread(target=fetch_gtp, args=(sm,)).start()
@@ -122,8 +125,30 @@ def listen():
                 Thread(target=launch_challenge, args=(params, sm)).start()
         except Exception:
             print_exc()
-            print(end="", flush=True)
-
     stop_match(sm)
-    print("Closing...", flush=True)
+
+
+def listen():
+    stdin_queue = mp.Queue()
+    match_handler_thread = mp.Process(target=match_handler, args=(stdin_queue,), daemon=True)
+    match_handler_thread.start()
+
+    is_windows = platform.system() == "Windows"
+    online = True
+    while online:
+        try:
+            line = str(sys.stdin.readline())
+            stdin_queue.put(line)
+            if is_windows:
+                match_handler_thread.join(timeout=60)
+        except Exception:
+            stdin_queue.put("shut_down | ")
+            online = False
+
+    print("Closing...")
+    match_handler_thread.join(timeout=60)
+    if match_handler_thread.is_alive():
+        print("Match handler thread is still alive after 60 seconds, killing it")
+        match_handler_thread.terminate()
+
     exit()
