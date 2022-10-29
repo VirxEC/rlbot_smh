@@ -18,7 +18,7 @@ from .start_match_util import create_match_config, start_match_helper
 from .story_mode_util import add_match_result, run_challenge
 
 
-def start_match(params: List[str], sm: SetupManager):
+def start_match(params: List[str], sm: SetupManager, out: mp.Queue):
     bot_list = json.loads(params[1])
     match_settings = json.loads(params[2])
 
@@ -30,6 +30,7 @@ def start_match(params: List[str], sm: SetupManager):
         rocket_league_exe_path = None
 
     start_match_helper(sm, bot_list, match_settings, RocketLeagueLauncherPreference(preferred_launcher, use_login_tricks, rocket_league_exe_path))
+    out.put("done")
 
 
 def stop_match(sm: SetupManager):
@@ -62,7 +63,7 @@ def spawn_view_car(params: List[str], sm: SetupManager):
     spawn_car_for_viewing(sm, config, team, showcase_type, map_name, RocketLeagueLauncherPreference(preferred_launcher, use_login_tricks, rocket_league_exe_path))
 
 
-def launch_challenge(params: List[str], sm: SetupManager):
+def launch_challenge(params: List[str], sm: SetupManager, out: mp.Queue):
     challenge_id = params[1]
     city_color = json.loads(params[2])
     team_color = json.loads(params[3])
@@ -94,9 +95,10 @@ def launch_challenge(params: List[str], sm: SetupManager):
     save_state = add_match_result(save_state, challenge_id, completed, results)
 
     print(f"-|-*|STORY_RESULT {json.dumps(save_state)}|*-|-", flush=True)
+    out.put("done")
 
 
-def match_handler(q: mp.Queue):
+def match_handler(q: mp.Queue, out: mp.Queue):
     sm = SetupManager()
     online = True
 
@@ -109,20 +111,24 @@ def match_handler(q: mp.Queue):
 
         try:
             if params[0] == "start_match":
-                start_match(params, sm)
+                Thread(target=start_match, args=(params, sm, out)).start()
             elif params[0] == "kill_bots":
                 Thread(target=stop_match, args=(sm,)).start()
+                out.put("done")
             elif params[0] == "shut_down":
                 print("Got shut down signal")
                 online = False
+                out.put("done")
             elif params[0] == "fetch_gtp":
                 Thread(target=fetch_gtp, args=(sm,)).start()
             elif params[0] == "set_state":
                 Thread(target=set_state, args=(params, sm)).start()
+                out.put("done")
             elif params[0] == "spawn_car_for_viewing":
                 Thread(target=spawn_view_car, args=(params, sm)).start()
+                out.put("done")
             elif params[0] == "launch_challenge":
-                Thread(target=launch_challenge, args=(params, sm)).start()
+                Thread(target=launch_challenge, args=(params, sm, out)).start()
         except Exception:
             print_exc()
     stop_match(sm)
@@ -130,17 +136,16 @@ def match_handler(q: mp.Queue):
 
 def listen():
     stdin_queue = mp.Queue()
-    match_handler_thread = mp.Process(target=match_handler, args=(stdin_queue,), daemon=True)
+    out_queue = mp.Queue()
+    match_handler_thread = mp.Process(target=match_handler, args=(stdin_queue, out_queue), daemon=True)
     match_handler_thread.start()
 
-    is_windows = platform.system() == "Windows"
     online = True
     while online:
         try:
             line = str(sys.stdin.readline())
             stdin_queue.put(line)
-            if is_windows:
-                match_handler_thread.join(timeout=60)
+            out_queue.get()
         except Exception:
             stdin_queue.put("shut_down | ")
             online = False
