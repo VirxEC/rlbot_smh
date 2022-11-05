@@ -225,4 +225,4 @@ def spawn_car_for_viewing(sm: SetupManager, looks: dict, team: int, showcase_typ
     looks_config = convert_to_looks_config(looks)
     loadout_config = load_bot_appearance(looks_config, team)
     spawn_car_in_showroom(sm, loadout_config, team, showcase_type, map_name, launcher_prefs)
-    print("Opened showroom!", flush=True)
+    print("Opened showroom!")

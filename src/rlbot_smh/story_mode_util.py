@@ -1,11 +1,12 @@
 import platform
 import random
 import time
-from traceback import print_exc
 from datetime import datetime
+from multiprocessing import Queue as MPQueue
+from traceback import print_exc
 from typing import Tuple
 
-from rlbot.matchconfig.match_config import MatchConfig, MutatorConfig, Team
+from rlbot.matchconfig.match_config import MatchConfig, MutatorConfig
 from rlbot.parsing.match_settings_config_parser import (game_mode_types,
                                                         match_length_types)
 from rlbot.setup_manager import RocketLeagueLauncherPreference, SetupManager
@@ -192,7 +193,7 @@ class ManualStatsTracker:
             if self._in_demo_state[i]:  # we will toggle this if we have respawned
                 self._in_demo_state[i] = cur_player.is_demolished
             elif cur_player.is_demolished:
-                print("SOMEONE GOT DEMO'd", flush=True)
+                print("SOMEONE GOT DEMO'd")
                 self._in_demo_state[i] = True
                 if not gamePacket.game_cars[i].is_bot:
                     self.stats["recievedDemos"] += 1
@@ -220,7 +221,7 @@ class ManualStatsTracker:
                     last_touch_player_name = self._last_touch_by_team[team_index].player_name
                     if not gamePacket.game_cars[last_touch_player].is_bot and last_touch_player_name != "":
                         self.stats["humanGoalsScored"] += 1
-                        print("humanGoalsScored", flush=True)
+                        print("humanGoalsScored")
 
 
 def wait_till_cars_spawned(
@@ -330,10 +331,11 @@ def manage_game_state(
 
 
 def run_challenge(
-    setup_manager: SetupManager, match_config: MatchConfig, challenge: dict, upgrades: dict, launcher_pref: RocketLeagueLauncherPreference
+    setup_manager: SetupManager, match_config: MatchConfig, challenge: dict, upgrades: dict, launcher_pref: RocketLeagueLauncherPreference, out: MPQueue
 ) -> Tuple[bool, dict]:
     """Launch the game and keep track of the state"""
     start_match_wrapper(setup_manager, match_config, launcher_pref)
+    out.put("done")
 
     setup_manager.game_interface.renderer.clear_screen(RENDERING_GROUP)
     game_results = None
@@ -342,7 +344,7 @@ def run_challenge(
     except:
         # no matter what happens we gotta continue
         print_exc()
-        print("Something failed with the game. Will proceed with shutdown", flush=True)
+        print("Something failed with the game. Will proceed with shutdown")
         # need to make failure apparent to user
         setup_failure_freeplay(setup_manager, "The game failed to continue")
         return False, None

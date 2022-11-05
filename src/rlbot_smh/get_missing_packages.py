@@ -1,6 +1,8 @@
 import sys
 
-from rlbot.utils.requirements_management import get_missing_packages, get_packages_needing_upgrade
+from rlbot.utils.requirements_management import (get_missing_packages,
+                                                 get_packages_needing_upgrade)
+
 
 # this python script exists because at this point we need Python to be configured in order to check reqs anyways
 # also porting this to pure Rust was a downwards spiral of copious amounts of regex
@@ -27,4 +29,4 @@ def run():
     else:
         out = "[]"
 
-    print(out, end="", flush=True)
+    print(out, end="")

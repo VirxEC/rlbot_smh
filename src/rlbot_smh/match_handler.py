@@ -1,11 +1,8 @@
 import json
 import multiprocessing as mp
-import platform
 import sys
 from pathlib import Path
-from queue import Empty
 from threading import Thread
-from time import sleep
 from traceback import print_exc
 from typing import List
 
@@ -18,7 +15,7 @@ from .start_match_util import create_match_config, start_match_helper
 from .story_mode_util import add_match_result, run_challenge
 
 
-def start_match(params: List[str], sm: SetupManager, out: mp.Queue):
+def start_match(params: List[str], sm: SetupManager):
     bot_list = json.loads(params[1])
     match_settings = json.loads(params[2])
 
@@ -30,7 +27,6 @@ def start_match(params: List[str], sm: SetupManager, out: mp.Queue):
         rocket_league_exe_path = None
 
     start_match_helper(sm, bot_list, match_settings, RocketLeagueLauncherPreference(preferred_launcher, use_login_tricks, rocket_league_exe_path))
-    out.put("done")
 
 
 def stop_match(sm: SetupManager):
@@ -95,7 +91,6 @@ def launch_challenge(params: List[str], sm: SetupManager, out: mp.Queue):
     save_state = add_match_result(save_state, challenge_id, completed, results)
 
     print(f"-|-*|STORY_RESULT {json.dumps(save_state)}|*-|-", flush=True)
-    out.put("done")
 
 
 def match_handler(q: mp.Queue, out: mp.Queue):
@@ -111,14 +106,15 @@ def match_handler(q: mp.Queue, out: mp.Queue):
 
         try:
             if params[0] == "start_match":
-                Thread(target=start_match, args=(params, sm, out)).start()
+                start_match(params, sm)
+                out.put("done")
             elif params[0] == "kill_bots":
-                Thread(target=stop_match, args=(sm,)).start()
+                stop_match(sm)
                 out.put("done")
             elif params[0] == "shut_down":
                 print("Got shut down signal")
                 online = False
-                out.put("done")
+                out.put("shut_down")
             elif params[0] == "fetch_gtp":
                 Thread(target=fetch_gtp, args=(sm,)).start()
             elif params[0] == "set_state":
@@ -145,7 +141,8 @@ def listen():
         try:
             line = str(sys.stdin.readline())
             stdin_queue.put(line)
-            out_queue.get()
+            if out_queue.get() == "shut_down":
+                online = False
         except Exception:
             stdin_queue.put("shut_down | ")
             online = False

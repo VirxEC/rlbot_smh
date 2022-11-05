@@ -1,5 +1,3 @@
-import platform
-from subprocess import TimeoutExpired
 from time import sleep
 from traceback import print_exc
 from typing import List
@@ -76,16 +74,6 @@ def setup_match(
         if not setup_manager.has_received_metadata_from_all_bots():
             expected_metadata = sum(1 for player in setup_manager.match_config.player_configs if player.rlbot_controlled)
             logger.warning(f"Did not receive metadata from all bots. Expected {expected_metadata} but only got {setup_manager.num_metadata_received}")
-        
-        if platform.system() == "Windows":
-            # Fix a wacky bug where standalone bots need to be give a kick in the butt to start
-            for bot in setup_manager.bot_processes.values():
-                if bot.subprocess is not None:
-                    try:
-                        bot.subprocess.wait(timeout=3)
-                    except TimeoutExpired:
-                        pass
-
 
     map_file = match_config.game_map
     if map_file.endswith('.upk') or map_file.endswith('.udk'):
