@@ -15,7 +15,7 @@ from .start_match_util import create_match_config, start_match_helper
 from .story_mode_util import add_match_result, run_challenge
 
 
-def start_match(params: List[str], sm: SetupManager):
+def start_match(params: List[str], sm: SetupManager, out: mp.Queue):
     bot_list = json.loads(params[1])
     match_settings = json.loads(params[2])
 
@@ -26,7 +26,7 @@ def start_match(params: List[str], sm: SetupManager):
     else:
         rocket_league_exe_path = None
 
-    start_match_helper(sm, bot_list, match_settings, RocketLeagueLauncherPreference(preferred_launcher, use_login_tricks, rocket_league_exe_path))
+    start_match_helper(sm, bot_list, match_settings, RocketLeagueLauncherPreference(preferred_launcher, use_login_tricks, rocket_league_exe_path), out)
 
 
 def stop_match(sm: SetupManager):
@@ -86,7 +86,7 @@ def launch_challenge(params: List[str], sm: SetupManager, out: mp.Queue):
             elif city_color is not None:
                 config.loadout_config.team_color_id = city_color
 
-    completed, results = run_challenge(sm, match_config, challenge, upgrades, RocketLeagueLauncherPreference(preferred_launcher, use_login_tricks, rocket_league_exe_path))
+    completed, results = run_challenge(sm, match_config, challenge, upgrades, RocketLeagueLauncherPreference(preferred_launcher, use_login_tricks, rocket_league_exe_path), out)
 
     save_state = add_match_result(save_state, challenge_id, completed, results)
 
@@ -106,8 +106,7 @@ def match_handler(q: mp.Queue, out: mp.Queue):
 
         try:
             if params[0] == "start_match":
-                start_match(params, sm)
-                out.put("done")
+                Thread(target=start_match, args=(params, sm, out)).start()
             elif params[0] == "kill_bots":
                 stop_match(sm)
                 out.put("done")

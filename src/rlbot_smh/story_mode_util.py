@@ -334,8 +334,7 @@ def run_challenge(
     setup_manager: SetupManager, match_config: MatchConfig, challenge: dict, upgrades: dict, launcher_pref: RocketLeagueLauncherPreference, out: MPQueue
 ) -> Tuple[bool, dict]:
     """Launch the game and keep track of the state"""
-    start_match_wrapper(setup_manager, match_config, launcher_pref)
-    out.put("done")
+    start_match_wrapper(setup_manager, match_config, launcher_pref, out)
 
     setup_manager.game_interface.renderer.clear_screen(RENDERING_GROUP)
     game_results = None

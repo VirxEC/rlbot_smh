@@ -1,6 +1,7 @@
 from time import sleep
 from traceback import print_exc
-from typing import List
+from typing import List, Optional
+import multiprocessing as mp
 
 from rlbot.matchconfig.match_config import (MatchConfig, MutatorConfig,
                                             PlayerConfig, ScriptConfig)
@@ -42,7 +43,7 @@ def create_script_config(script):
 
 
 def setup_match(
-    setup_manager: SetupManager, match_config: MatchConfig, launcher_pref: RocketLeagueLauncherPreference
+    setup_manager: SetupManager, match_config: MatchConfig, launcher_pref: RocketLeagueLauncherPreference, out: Optional[mp.Queue] = None
 ):
     """Starts the match and bots. Also detects and handles custom maps"""
 
@@ -57,6 +58,9 @@ def setup_match(
         setup_manager.launch_early_start_bot_processes()
         setup_manager.start_match()
         setup_manager.launch_bot_processes()
+
+        if out is not None:
+            out.put("done")
 
         logger.info("Waiting to recieve metadata from all bots...")
 
@@ -132,19 +136,19 @@ def create_match_config(bot_list: List[dict], match_settings: dict) -> MatchConf
     return match_config
 
 
-def start_match_wrapper(sm: SetupManager, match_config: MatchConfig, launcher_prefs: RocketLeagueLauncherPreference):
+def start_match_wrapper(sm: SetupManager, match_config: MatchConfig, launcher_prefs: RocketLeagueLauncherPreference, out: Optional[mp.Queue] = None):
     logger.info(f"Launcher preferences: {launcher_prefs}")
 
     # these fancy prints will not get printed to the console
     # the Rust port of the RLBotGUI will capture it and fire a tauri event
 
     try:
-        setup_match(sm, match_config, launcher_prefs)
+        setup_match(sm, match_config, launcher_prefs, out)
         print("-|-*|MATCH STARTED|*-|-", flush=True)
     except Exception:
         print_exc()
         print("-|-*|MATCH START FAILED|*-|-", flush=True)
 
 
-def start_match_helper(sm: SetupManager, bot_list: List[dict], match_settings: dict, launcher_prefs: RocketLeagueLauncherPreference):
-    start_match_wrapper(sm, create_match_config(bot_list, match_settings), launcher_prefs)
+def start_match_helper(sm: SetupManager, bot_list: List[dict], match_settings: dict, launcher_prefs: RocketLeagueLauncherPreference, out: Optional[mp.Queue] = None):
+    start_match_wrapper(sm, create_match_config(bot_list, match_settings), launcher_prefs, out)
