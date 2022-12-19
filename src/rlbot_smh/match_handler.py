@@ -132,7 +132,7 @@ def match_handler(q: mp.Queue, out: mp.Queue):
 def listen():
     stdin_queue = mp.Queue()
     out_queue = mp.Queue()
-    match_handler_thread = mp.Process(target=match_handler, args=(stdin_queue, out_queue), daemon=True)
+    match_handler_thread = mp.Process(target=match_handler, args=(stdin_queue, out_queue))
     match_handler_thread.start()
 
     online = True
@@ -153,3 +153,30 @@ def listen():
         match_handler_thread.terminate()
 
     exit()
+
+def from_file(file_path: str):
+    from time import sleep
+    # do listen but instead of reading from sys.stdin, read from a file as set by the first argument
+    # when CTRL+C is pressed, treat it as if "shut_down | " was read from stdin
+    
+    stdin_queue = mp.Queue()
+    out_queue = mp.Queue()
+    match_handler_thread = mp.Process(target=match_handler, args=(stdin_queue, out_queue))
+    match_handler_thread.start()
+    
+    with open(file_path + ".txt", "r") as f:
+        command = f.readline()
+        stdin_queue.put(command)
+
+    # wait for an interrupt (e.x. KeyboardInterrupt or CTRL+C)
+    try:
+        while True:
+            sleep(1)
+    except InterruptedError:
+        stdin_queue.put("shut_down | ")
+
+    print("Closing...")
+    match_handler_thread.join(timeout=60)
+    if match_handler_thread.is_alive():
+        print("Match handler thread is still alive after 60 seconds, killing it")
+        match_handler_thread.terminate()
