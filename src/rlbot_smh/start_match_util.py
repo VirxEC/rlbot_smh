@@ -34,7 +34,7 @@ def create_player_config(bot: dict, human_index_tracker: IncrementingInteger):
         player_config.loadout_config = loadout
     elif player_config.bot and not player_config.rlbot_controlled:
         set_random_psyonix_bot_preset(player_config)
-    
+
     return player_config
 
 

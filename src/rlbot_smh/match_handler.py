@@ -129,7 +129,11 @@ def match_handler(q: mp.Queue, out: mp.Queue):
     stop_match(sm)
 
 
-def listen():
+def listen(is_raw_json=True):
+    if not is_raw_json:
+        from base64 import standard_b64decode
+        from gzip import decompress
+
     stdin_queue = mp.Queue()
     out_queue = mp.Queue()
     match_handler_thread = mp.Process(target=match_handler, args=(stdin_queue, out_queue))
@@ -138,11 +142,16 @@ def listen():
     online = True
     while online:
         try:
-            line = str(sys.stdin.readline())
-            stdin_queue.put(line)
+            line = sys.stdin.readline()
+
+            if not is_raw_json:
+                # if the command is not raw json, then it must be decoded
+                line = decompress(standard_b64decode(line)).decode("utf-8")
+
+            stdin_queue.put(str(line))
             if out_queue.get() == "shut_down":
                 online = False
-        except Exception:
+        except BaseException:
             stdin_queue.put("shut_down | ")
             online = False
 
@@ -154,25 +163,34 @@ def listen():
 
     exit()
 
-def from_file(file_path: str):
+def from_file(file_path: str, is_raw_json: bool=True):
     from time import sleep
+
+    if not is_raw_json:
+        from base64 import standard_b64decode
+        from gzip import decompress
+
     # do listen but instead of reading from sys.stdin, read from a file as set by the first argument
     # when CTRL+C is pressed, treat it as if "shut_down | " was read from stdin
-    
+
     stdin_queue = mp.Queue()
     out_queue = mp.Queue()
     match_handler_thread = mp.Process(target=match_handler, args=(stdin_queue, out_queue))
     match_handler_thread.start()
-    
+
     with open(file_path + ".txt", "r") as f:
         command = f.readline()
-        stdin_queue.put(command)
 
-    # wait for an interrupt (e.x. KeyboardInterrupt or CTRL+C)
+    if not is_raw_json:
+        command = decompress(standard_b64decode(command)).decode("utf-8")
+
+    stdin_queue.put(str(command))
+
+    # wait for an error (e.x. KeyboardInterrupt or CTRL+C)
     try:
         while True:
             sleep(1)
-    except InterruptedError:
+    except BaseException:
         stdin_queue.put("shut_down | ")
 
     print("Closing...")

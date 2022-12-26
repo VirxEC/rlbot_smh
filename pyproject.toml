@@ -1,6 +1,6 @@
 [project]
 name = "rlbot_smh"
-version = "1.0.12"
+version = "1.0.13"
 authors = [
   { name="VirxEC", email="virx@virxcase.dev" },
 ]
